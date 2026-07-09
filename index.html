@@ -755,13 +755,14 @@ function generateGroupName(){
 
 function openTagManager(){
   const overlay=document.getElementById('pickerOverlay');
-  const imgs=manifest.images;
+  const libLabel=(LIBRARIES.find(l=>l.id===currentLibrary)||{}).label||'';
+  const imgs=manifest.images.filter(i=>(i.library||'portrait')===currentLibrary);
   function draw(){
     const TAG_GROUPS=getTagGroups();
     const ALL_GROUPED_TAGS=getAllGroupedTags();
     const usedTags=new Set(imgs.flatMap(i=>i.tags||[]));
     overlay.innerHTML=`<div class="picker-box" style="max-width:480px">
-      <div class="picker-title">管理标签</div>
+      <div class="picker-title">管理标签 · ${libLabel}库</div>
       <div class="tag-mgr-list" id="tmList"></div>
       <div class="picker-actions"><button class="picker-btn picker-btn-cancel" id="tmClose">关闭</button></div></div>`;
     const list=overlay.querySelector('#tmList');
@@ -781,12 +782,11 @@ function openTagManager(){
         showToast(`已重命名为「${nn}」`);draw();
       };
       row.querySelector('.delete').onclick=async()=>{
-        if(!confirm(`确定删除标签「${tag}」吗？\n${count} 张图片将移除此标签`))return;
+        if(!confirm(`确定删除标签「${tag}」吗？\n${count} 张${libLabel}库图片将移除此标签`))return;
         imgs.forEach(i=>{if(i.tags)i.tags=i.tags.filter(t=>t!==tag)});
-        userTags=userTags.filter(t=>t!==tag);saveTags(userTags);
         await saveManifest();
         Object.keys(libFilters).forEach(k=>{if(libFilters[k]===tag)delete libFilters[k]});
-        showToast(`已删除标签「${tag}」`);draw();
+        showToast(`已从${libLabel}库删除标签「${tag}」`);draw();
       };
       list.appendChild(row);
     };
