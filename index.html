@@ -41,6 +41,14 @@
   .lib-filter-btn:hover{border-color:#ccc;color:#666}
   .lib-filter-btn.active{border-color:#a78bfa;color:#7c3aed;background:rgba(167,139,250,.06)}
   .lib-filter-sep{width:1px;height:14px;background:#e8e8f0;margin:0 2px}
+  .lib-group-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 0}
+  .lib-group-btn{padding:5px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #e8e8f0;color:#999;background:#fff;transition:all .2s;user-select:none}
+  .lib-group-btn:hover{border-color:#ccc;color:#666;background:#fafafa}
+  .lib-group-btn.expanded{border-color:#a78bfa;color:#7c3aed;background:rgba(167,139,250,.04)}
+  .lib-group-btn.has-filter{color:#7c3aed;border-color:#c4b5fd}
+  .lib-group-btn .group-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#a78bfa;margin-left:4px;vertical-align:middle}
+  .lib-group-tags{display:flex;gap:6px;flex-wrap:wrap;padding:8px 0 4px;animation:fadeIn .15s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
   .lib-section{margin-bottom:24px}
   .lib-section-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f0f5}
   .lib-section-title{font-size:13px;font-weight:600;color:#666}
@@ -362,18 +370,37 @@ function getImg(id){return manifest.images.find(i=>i.id===id)}
 // ============================================================
 // Tags
 // ============================================================
-const TAG_GROUPS=[
-  {name:'人数',tags:['单人','情侣照','闺蜜照','空镜']},
-  {name:'场景',tags:['外景','棚拍']},
-  {name:'景别',tags:['上半身','表情特写','站姿参考','坐姿参考','躺姿参考']},
-  {name:'镜头',tags:['仰角镜头','俯视镜头']},
-  {name:'风格',tags:['复古妆造','新中式','汉服']},
-  {name:'参考',tags:['色调参考','光影参考','道具参考','布景参考','慢门参考']},
-  {name:'色调',tags:['莫兰迪','日系透亮','欧美浓郁','胶片质感','黑白','高饱和','冷调','暖调']},
-  {name:'流派',tags:['印象派','文艺复兴','浮世绘','极简主义']},
-];
-const ALL_GROUPED_TAGS=new Set(TAG_GROUPS.flatMap(g=>g.tags));
-const DEFAULT_TAGS=TAG_GROUPS.flatMap(g=>g.tags);
+const LIBRARY_TAG_GROUPS={
+  portrait:[
+    {name:'人数',tags:['单人','情侣照','闺蜜照','空镜']},
+    {name:'场景',tags:['外景','棚拍']},
+    {name:'景别',tags:['上半身','表情特写','站姿参考','坐姿参考','躺姿参考']},
+    {name:'镜头',tags:['仰角镜头','俯视镜头']},
+    {name:'风格',tags:['复古妆造','新中式','汉服']},
+    {name:'参考',tags:['色调参考','光影参考','道具参考','布景参考','慢门参考']},
+    {name:'色调',tags:['莫兰迪','日系透亮','欧美浓郁','胶片质感','黑白','高饱和','冷调','暖调']},
+    {name:'流派',tags:['印象派','文艺复兴','浮世绘','极简主义']},
+  ],
+  landscape:[
+    {name:'类型',tags:['山水','城市','建筑','海景','天空','花草','树木']},
+    {name:'时段',tags:['日出','日落','蓝调时刻','夜景','正午']},
+    {name:'色调',tags:['莫兰迪','日系透亮','欧美浓郁','胶片质感','黑白','高饱和','冷调','暖调']},
+  ],
+  painting:[
+    {name:'流派',tags:['印象派','文艺复兴','浮世绘','极简主义','超现实主义','表现主义']},
+    {name:'媒介',tags:['油画','水彩','国画','版画','素描','数字绘画']},
+    {name:'色调',tags:['莫兰迪','高饱和','冷调','暖调','黑白']},
+  ],
+  interior:[
+    {name:'风格',tags:['现代','北欧','日式','中式','法式','工业风','侘寂']},
+    {name:'空间',tags:['客厅','卧室','厨房','浴室','阳台','庭院']},
+    {name:'色调',tags:['莫兰迪','日系透亮','暖调','冷调','黑白']},
+  ],
+};
+function getTagGroups(){return LIBRARY_TAG_GROUPS[currentLibrary]||LIBRARY_TAG_GROUPS.portrait}
+function getAllGroupedTags(){return new Set(getTagGroups().flatMap(g=>g.tags))}
+const DEFAULT_TAGS=Object.values(LIBRARY_TAG_GROUPS).flatMap(groups=>groups.flatMap(g=>g.tags));
+const ALL_DEFAULT_TAGS=new Set(DEFAULT_TAGS);
 function loadTags(){try{const t=JSON.parse(localStorage.getItem('photo_tags'));if(!t||!t.length)return DEFAULT_TAGS.slice();const merged=[...new Set([...DEFAULT_TAGS,...t])];return merged}catch(e){return DEFAULT_TAGS.slice()}}
 function saveTags(tags){localStorage.setItem('photo_tags',JSON.stringify(tags))}
 let userTags=loadTags();
@@ -381,7 +408,7 @@ let userTags=loadTags();
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200)}
 function fmtSize(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
 
-let currentLibrary='portrait',libFilters={},expandedGroup=null;
+let currentLibrary='portrait',libFilters={},expandedGroup=null,expandedFilterGroup=null;
 let draggedImgId=null,isDraggingInternal=false;
 
 const LIBRARIES=[
@@ -409,6 +436,8 @@ function openPicker(opts){
           <div class="picker-input-row" id="pkGroupRow" style="display:${asGroup?'flex':'none'}"><input class="picker-input" id="pkGroupName" placeholder="组名（留空自动生成）" value="${groupName}"></div></div>`:''}
         <div class="picker-actions"><button class="picker-btn picker-btn-cancel" id="pkCancel">取消</button><button class="picker-btn picker-btn-ok" id="pkOk">确定</button></div></div>`;
       const gc=overlay.querySelector('#pkTagGroups');
+      const TAG_GROUPS=getTagGroups();
+      const ALL_GROUPED_TAGS=getAllGroupedTags();
       TAG_GROUPS.forEach(group=>{
         const visibleTags=group.tags.filter(t=>userTags.includes(t));
         if(!visibleTags.length)return;
@@ -452,7 +481,7 @@ function render(){
 }
 
 function switchLibrary(lib){
-  currentLibrary=lib;expandedGroup=null;libFilters={};
+  currentLibrary=lib;expandedGroup=null;expandedFilterGroup=null;libFilters={};
   document.querySelectorAll('.top-tab').forEach((t,i)=>t.classList.toggle('active',LIBRARIES[i].id===lib));
   renderLibrary();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -463,7 +492,6 @@ function switchLibrary(lib){
 // ============================================================
 const PEOPLE_TAGS=['情侣照','闺蜜照','空镜'];
 const SCENE_TAGS=['外景'];
-const SECONDARY_GROUPS=TAG_GROUPS.filter(g=>g.name!=='人数');
 
 function imgPeople(img){
   const tags=img.tags||[];
@@ -480,55 +508,78 @@ function renderLibrary(){
 
   filterEl.innerHTML='';
 
-  // --- Primary tabs (人数) ---
-  const primaryTab=libFilters['人数']||'全部';
-  const tabs=document.createElement('div');tabs.className='lib-primary-tabs';
-  const peopleCounts={};
-  imgs.forEach(img=>{const p=imgPeople(img);peopleCounts[p]=(peopleCounts[p]||0)+1});
-  ['全部','单人','情侣照','闺蜜照','空镜'].forEach(label=>{
-    const t=document.createElement('div');t.className='lib-primary-tab'+(primaryTab===label?' active':'');
-    const cnt=label==='全部'?imgs.length:(peopleCounts[label]||0);
-    t.innerHTML=`${label}<span class="tab-count">${cnt}</span>`;
-    t.onclick=()=>{
-      if(label==='全部')delete libFilters['人数'];else libFilters['人数']=label;
-      renderLibrary();
-    };
-    tabs.appendChild(t);
-  });
-  filterEl.appendChild(tabs);
-
-  // --- Secondary filter bar ---
-  const usedTags=new Set(imgs.flatMap(i=>i.tags||[]));
-  const secBar=document.createElement('div');secBar.className='lib-secondary-bar';
-  let hasSecondary=false;
-  SECONDARY_GROUPS.forEach((group,gi)=>{
-    const visibleTags=group.tags.filter(t=>userTags.includes(t)||usedTags.has(t));
-    if(!visibleTags.length)return;
-    if(hasSecondary){const sep=document.createElement('div');sep.className='lib-filter-sep';secBar.appendChild(sep)}
-    hasSecondary=true;
-    const cur=libFilters[group.name]||null;
-    visibleTags.forEach(tag=>{
-      const btn=document.createElement('div');btn.className='lib-filter-btn'+(cur===tag?' active':'');btn.textContent=tag;
-      btn.onclick=()=>{
-        if(cur===tag)delete libFilters[group.name];else libFilters[group.name]=tag;
+  // --- Primary tabs (人数 - portrait only) ---
+  const hasPeopleTabs=getTagGroups().some(g=>g.name==='人数');
+  const primaryTab=hasPeopleTabs?(libFilters['人数']||'全部'):'全部';
+  if(hasPeopleTabs){
+    const tabs=document.createElement('div');tabs.className='lib-primary-tabs';
+    const peopleCounts={};
+    imgs.forEach(img=>{const p=imgPeople(img);peopleCounts[p]=(peopleCounts[p]||0)+1});
+    ['全部','单人','情侣照','闺蜜照','空镜'].forEach(label=>{
+      const t=document.createElement('div');t.className='lib-primary-tab'+(primaryTab===label?' active':'');
+      const cnt=label==='全部'?imgs.length:(peopleCounts[label]||0);
+      t.innerHTML=`${label}<span class="tab-count">${cnt}</span>`;
+      t.onclick=()=>{
+        if(label==='全部')delete libFilters['人数'];else libFilters['人数']=label;
         renderLibrary();
       };
-      secBar.appendChild(btn);
+      tabs.appendChild(t);
     });
+    filterEl.appendChild(tabs);
+  }
+
+  // --- Secondary filter bar (collapsible groups) ---
+  const TAG_GROUPS=getTagGroups();
+  const ALL_GROUPED_TAGS=getAllGroupedTags();
+  const secondaryGroups=TAG_GROUPS.filter(g=>g.name!=='人数');
+  const usedTags=new Set(imgs.flatMap(i=>i.tags||[]));
+  const groupBar=document.createElement('div');groupBar.className='lib-group-bar';
+  secondaryGroups.forEach(group=>{
+    const visibleTags=group.tags.filter(t=>userTags.includes(t)||usedTags.has(t));
+    if(!visibleTags.length)return;
+    const hasActive=!!libFilters[group.name];
+    const isExpanded=expandedFilterGroup===group.name;
+    const btn=document.createElement('div');
+    btn.className='lib-group-btn'+(isExpanded?' expanded':'')+(hasActive?' has-filter':'');
+    btn.innerHTML=group.name+(hasActive?'<span class="group-dot"></span>':'');
+    btn.onclick=()=>{expandedFilterGroup=isExpanded?null:group.name;renderLibrary()};
+    groupBar.appendChild(btn);
   });
   const extraTags=[...usedTags].filter(t=>!ALL_GROUPED_TAGS.has(t));
   if(extraTags.length){
-    if(hasSecondary){const sep=document.createElement('div');sep.className='lib-filter-sep';secBar.appendChild(sep)}
-    const cur=libFilters['其他']||null;
-    extraTags.forEach(tag=>{
-      const btn=document.createElement('div');btn.className='lib-filter-btn'+(cur===tag?' active':'');btn.textContent=tag;
-      btn.onclick=()=>{if(cur===tag)delete libFilters['其他'];else libFilters['其他']=tag;renderLibrary()};
-      secBar.appendChild(btn);
-    });
+    const hasActive=!!libFilters['其他'];
+    const isExpanded=expandedFilterGroup==='其他';
+    const btn=document.createElement('div');
+    btn.className='lib-group-btn'+(isExpanded?' expanded':'')+(hasActive?' has-filter':'');
+    btn.innerHTML='其他'+(hasActive?'<span class="group-dot"></span>':'');
+    btn.onclick=()=>{expandedFilterGroup=isExpanded?null:'其他';renderLibrary()};
+    groupBar.appendChild(btn);
   }
-  const mgBtn=document.createElement('div');mgBtn.className='lib-filter-btn';mgBtn.style.cssText='border-style:dashed';mgBtn.textContent='✎ 管理';
-  mgBtn.onclick=()=>openTagManager();secBar.appendChild(mgBtn);
-  filterEl.appendChild(secBar);
+  if(isAdmin()){
+    const mgBtn=document.createElement('div');mgBtn.className='lib-group-btn';mgBtn.style.cssText='border-style:dashed;font-size:11px';mgBtn.textContent='✎ 管理';
+    mgBtn.onclick=()=>openTagManager();groupBar.appendChild(mgBtn);
+  }
+  filterEl.appendChild(groupBar);
+
+  // --- Expanded group tags ---
+  if(expandedFilterGroup){
+    const group=secondaryGroups.find(g=>g.name===expandedFilterGroup);
+    const tagsToShow=group?group.tags.filter(t=>userTags.includes(t)||usedTags.has(t)):extraTags;
+    if(tagsToShow.length){
+      const tagRow=document.createElement('div');tagRow.className='lib-group-tags';
+      const filterKey=group?group.name:'其他';
+      const cur=libFilters[filterKey]||null;
+      tagsToShow.forEach(tag=>{
+        const btn=document.createElement('div');btn.className='lib-filter-btn'+(cur===tag?' active':'');btn.textContent=tag;
+        btn.onclick=()=>{
+          if(cur===tag)delete libFilters[filterKey];else libFilters[filterKey]=tag;
+          renderLibrary();
+        };
+        tagRow.appendChild(btn);
+      });
+      filterEl.appendChild(tagRow);
+    }
+  }
 
   // --- Filter logic ---
   const activeFilters=Object.entries(libFilters);
@@ -554,7 +605,7 @@ function renderLibrary(){
   }
 
   // --- Sectioned or flat view ---
-  if(primaryTab==='全部'&&!Object.keys(libFilters).some(k=>k!=='人数')){
+  if(hasPeopleTabs&&primaryTab==='全部'&&!Object.keys(libFilters).some(k=>k!=='人数')){
     // Show sectioned by 人数
     const sections=[
       {key:'单人',label:'单人',imgs:filtered.filter(i=>imgPeople(i)==='单人')},
@@ -581,7 +632,11 @@ function renderLibrary(){
 function renderImgsToGrid(grid,imgs){
   const groups={};const ungrouped=[];
   imgs.forEach(img=>{if(img.group)(groups[img.group]=groups[img.group]||[]).push(img);else ungrouped.push(img)});
-  Object.keys(groups).sort().forEach(g=>grid.appendChild(makeStackCard(g,groups[g])));
+  Object.keys(groups).sort((a,b)=>{
+    const na=a.match(/\d+/),nb=b.match(/\d+/);
+    if(na&&nb)return parseInt(na[0])-parseInt(nb[0]);
+    return a.localeCompare(b,'zh-CN');
+  }).forEach(g=>grid.appendChild(makeStackCard(g,groups[g])));
   ungrouped.forEach((img,i)=>grid.appendChild(makeLibItem(img,i,ungrouped,true)));
 }
 
@@ -702,6 +757,8 @@ function openTagManager(){
   const overlay=document.getElementById('pickerOverlay');
   const imgs=manifest.images;
   function draw(){
+    const TAG_GROUPS=getTagGroups();
+    const ALL_GROUPED_TAGS=getAllGroupedTags();
     const usedTags=new Set(imgs.flatMap(i=>i.tags||[]));
     overlay.innerHTML=`<div class="picker-box" style="max-width:480px">
       <div class="picker-title">管理标签</div>
