@@ -402,6 +402,12 @@ const LIBRARY_TAG_GROUPS={
     {name:'空间',tags:['客厅','卧室','厨房','浴室','阳台','庭院']},
     {name:'色调',tags:['莫兰迪','日系透亮','暖调','冷调','黑白']},
   ],
+  fashion:[
+    {name:'品类',tags:['连衣裙','西装','外套','衬衫','针织','半裙','裤装','鞋包','配饰']},
+    {name:'风格',tags:['法式','日系','韩系','复古','街头','极简','民族风','新中式']},
+    {name:'季节',tags:['春夏','秋冬']},
+    {name:'色调',tags:['莫兰迪','高饱和','黑白','暖调','冷调']},
+  ],
 };
 function getTagGroups(){return LIBRARY_TAG_GROUPS[currentLibrary]||LIBRARY_TAG_GROUPS.portrait}
 function getAllGroupedTags(){return new Set(getTagGroups().flatMap(g=>g.tags))}
@@ -422,6 +428,7 @@ const LIBRARIES=[
   {id:'landscape',label:'景物',color:'#22c55e'},
   {id:'painting',label:'绘画',color:'#a78bfa'},
   {id:'interior',label:'家居',color:'#f59e0b'},
+  {id:'fashion',label:'服饰',color:'#06b6d4'},
 ];
 
 // ============================================================
