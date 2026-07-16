@@ -411,6 +411,7 @@ const LIBRARY_TAG_GROUPS={
 };
 function getTagGroups(){return LIBRARY_TAG_GROUPS[currentLibrary]||LIBRARY_TAG_GROUPS.portrait}
 function getAllGroupedTags(){return new Set(getTagGroups().flatMap(g=>g.tags))}
+const ALL_LIBRARY_TAGS=new Set(Object.values(LIBRARY_TAG_GROUPS).flatMap(groups=>groups.flatMap(g=>g.tags)));
 const DEFAULT_TAGS=Object.values(LIBRARY_TAG_GROUPS).flatMap(groups=>groups.flatMap(g=>g.tags));
 const ALL_DEFAULT_TAGS=new Set(DEFAULT_TAGS);
 function loadTags(){try{const t=JSON.parse(localStorage.getItem('photo_tags'));if(!t||!t.length)return DEFAULT_TAGS.slice();const merged=[...new Set([...DEFAULT_TAGS,...t])];return merged}catch(e){return DEFAULT_TAGS.slice()}}
@@ -459,7 +460,7 @@ function openPicker(opts){
         visibleTags.forEach(t=>{const p=document.createElement('span');p.className='picker-pill'+(selTags.has(t)?' selected':'');p.textContent=t;p.onclick=()=>{if(selTags.has(t))selTags.delete(t);else selTags.add(t);draw()};row.appendChild(p)});
         gc.appendChild(row);
       });
-      const extraTags=userTags.filter(t=>!ALL_GROUPED_TAGS.has(t));
+      const extraTags=userTags.filter(t=>!ALL_LIBRARY_TAGS.has(t));
       if(extraTags.length){
         const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap';
         row.innerHTML=`<span style="font-size:11px;color:#999;min-width:40px">其他</span>`;
@@ -558,7 +559,7 @@ function renderLibrary(){
     btn.onclick=()=>{expandedFilterGroup=isExpanded?null:group.name;renderLibrary()};
     groupBar.appendChild(btn);
   });
-  const extraTags=[...usedTags].filter(t=>!ALL_GROUPED_TAGS.has(t));
+  const extraTags=[...usedTags].filter(t=>!ALL_LIBRARY_TAGS.has(t));
   if(extraTags.length){
     const hasActive=!!libFilters['其他'];
     const isExpanded=expandedFilterGroup==='其他';
@@ -810,7 +811,7 @@ function openTagManager(){
       list.appendChild(hdr);
       visibleTags.forEach(renderTag);
     });
-    const extraTags=[...usedTags].filter(t=>!ALL_GROUPED_TAGS.has(t)&&userTags.includes(t));
+    const extraTags=[...usedTags].filter(t=>!ALL_LIBRARY_TAGS.has(t)&&userTags.includes(t));
     if(extraTags.length){
       const hdr=document.createElement('div');hdr.style.cssText='font-size:11px;color:#999;margin:10px 0 4px;padding-top:6px;border-top:1px solid #f0f0f5';hdr.textContent='其他';
       list.appendChild(hdr);
