@@ -414,6 +414,28 @@ function getAllGroupedTags(){return new Set(getTagGroups().flatMap(g=>g.tags))}
 const ALL_LIBRARY_TAGS=new Set(Object.values(LIBRARY_TAG_GROUPS).flatMap(groups=>groups.flatMap(g=>g.tags)));
 const DEFAULT_TAGS=Object.values(LIBRARY_TAG_GROUPS).flatMap(groups=>groups.flatMap(g=>g.tags));
 const ALL_DEFAULT_TAGS=new Set(DEFAULT_TAGS);
+
+// Custom tags per library+group, persisted in localStorage
+function loadCustomTags(){try{return JSON.parse(localStorage.getItem('custom_tags'))||{}}catch(e){return{}}}
+function saveCustomTags(ct){localStorage.setItem('custom_tags',JSON.stringify(ct))}
+let customTags=loadCustomTags();
+function getGroupTags(group){
+  const key=currentLibrary+':'+group.name;
+  const custom=customTags[key]||[];
+  return [...new Set([...group.tags,...custom])];
+}
+function addCustomTag(groupName,tag){
+  const key=currentLibrary+':'+groupName;
+  if(!customTags[key])customTags[key]=[];
+  if(!customTags[key].includes(tag))customTags[key].push(tag);
+  saveCustomTags(customTags);
+  if(!userTags.includes(tag)){userTags.push(tag);saveTags(userTags)}
+}
+function removeCustomTag(groupName,tag){
+  const key=currentLibrary+':'+groupName;
+  if(customTags[key])customTags[key]=customTags[key].filter(t=>t!==tag);
+  saveCustomTags(customTags);
+}
 function loadTags(){try{const t=JSON.parse(localStorage.getItem('photo_tags'));if(!t||!t.length)return DEFAULT_TAGS.slice();const merged=[...new Set([...DEFAULT_TAGS,...t])];return merged}catch(e){return DEFAULT_TAGS.slice()}}
 function saveTags(tags){localStorage.setItem('photo_tags',JSON.stringify(tags))}
 let userTags=loadTags();
@@ -453,7 +475,7 @@ function openPicker(opts){
       const TAG_GROUPS=getTagGroups();
       const ALL_GROUPED_TAGS=getAllGroupedTags();
       TAG_GROUPS.forEach(group=>{
-        const visibleTags=group.tags.filter(t=>userTags.includes(t));
+        const visibleTags=getGroupTags(group);
         if(!visibleTags.length)return;
         const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap';
         row.innerHTML=`<span style="font-size:11px;color:#999;min-width:40px">${group.name}</span>`;
@@ -549,7 +571,7 @@ function renderLibrary(){
   const usedTags=new Set(imgs.flatMap(i=>i.tags||[]));
   const groupBar=document.createElement('div');groupBar.className='lib-group-bar';
   secondaryGroups.forEach(group=>{
-    const visibleTags=group.tags.filter(t=>userTags.includes(t)||usedTags.has(t));
+    const visibleTags=getGroupTags(group).filter(t=>userTags.includes(t)||usedTags.has(t)||group.tags.includes(t));
     if(!visibleTags.length)return;
     const hasActive=!!libFilters[group.name];
     const isExpanded=expandedFilterGroup===group.name;
@@ -578,7 +600,7 @@ function renderLibrary(){
   // --- Expanded group tags ---
   if(expandedFilterGroup){
     const group=secondaryGroups.find(g=>g.name===expandedFilterGroup);
-    const tagsToShow=group?group.tags.filter(t=>userTags.includes(t)||usedTags.has(t)):extraTags;
+    const tagsToShow=group?getGroupTags(group).filter(t=>userTags.includes(t)||usedTags.has(t)||group.tags.includes(t)):extraTags;
     if(tagsToShow.length){
       const tagRow=document.createElement('div');tagRow.className='lib-group-tags';
       const filterKey=group?group.name:'其他';
@@ -805,11 +827,26 @@ function openTagManager(){
       list.appendChild(row);
     };
     TAG_GROUPS.forEach(group=>{
-      const visibleTags=group.tags.filter(t=>userTags.includes(t)||usedTags.has(t));
-      if(!visibleTags.length)return;
-      const hdr=document.createElement('div');hdr.style.cssText='font-size:11px;color:#999;margin:10px 0 4px;padding-top:6px;border-top:1px solid #f0f0f5';hdr.textContent=group.name;
+      const allGroupTags=getGroupTags(group);
+      const visibleTags=allGroupTags.filter(t=>userTags.includes(t)||usedTags.has(t)||group.tags.includes(t));
+      const hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#999;margin:10px 0 4px;padding-top:6px;border-top:1px solid #f0f0f5';
+      hdr.innerHTML=`<span>${group.name}</span>`;
       list.appendChild(hdr);
       visibleTags.forEach(renderTag);
+      // Add new tag input row
+      const addRow=document.createElement('div');addRow.style.cssText='display:flex;gap:6px;margin:4px 0 2px';
+      addRow.innerHTML=`<input class="picker-input" placeholder="新增${group.name}标签..." style="flex:1;padding:5px 10px;font-size:12px"><button class="picker-input-btn" style="padding:5px 12px;font-size:12px">+ 添加</button>`;
+      const inp=addRow.querySelector('input');
+      const addBtn=addRow.querySelector('button');
+      const doAdd=()=>{
+        const v=inp.value.trim();if(!v)return;
+        if(visibleTags.includes(v)||usedTags.has(v)){showToast('该标签已存在');return}
+        addCustomTag(group.name,v);
+        showToast(`已添加「${v}」到${group.name}`);draw();
+      };
+      addBtn.onclick=doAdd;
+      inp.addEventListener('keydown',e=>{if(e.key==='Enter')doAdd()});
+      list.appendChild(addRow);
     });
     const extraTags=[...usedTags].filter(t=>!ALL_LIBRARY_TAGS.has(t)&&userTags.includes(t));
     if(extraTags.length){
