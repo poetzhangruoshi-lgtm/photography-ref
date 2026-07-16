@@ -408,6 +408,12 @@ const LIBRARY_TAG_GROUPS={
     {name:'季节',tags:['春夏','秋冬']},
     {name:'色调',tags:['莫兰迪','高饱和','黑白','暖调','冷调']},
   ],
+  graphic:[
+    {name:'类型',tags:['海报','Logo','包装','名片','Banner','UI界面','字体设计','插画']},
+    {name:'风格',tags:['极简','扁平','拟物','赛博朋克','复古','孟菲斯','瑞士风格','日式']},
+    {name:'色彩',tags:['莫兰迪','高饱和','黑白','渐变','撞色','单色']},
+    {name:'行业',tags:['餐饮','科技','美妆','文创','教育','金融']},
+  ],
 };
 function getTagGroups(){return LIBRARY_TAG_GROUPS[currentLibrary]||LIBRARY_TAG_GROUPS.portrait}
 function getAllGroupedTags(){return new Set(getTagGroups().flatMap(g=>g.tags))}
@@ -452,6 +458,7 @@ const LIBRARIES=[
   {id:'painting',label:'绘画',color:'#a78bfa'},
   {id:'interior',label:'家居',color:'#f59e0b'},
   {id:'fashion',label:'服饰',color:'#06b6d4'},
+  {id:'graphic',label:'平面设计',color:'#f43f5e'},
 ];
 
 // ============================================================
